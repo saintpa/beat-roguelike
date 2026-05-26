@@ -112,4 +112,4 @@ class SamplerWindow(QWidget):
         pressed_key = key_map.get(event.key())
 
         if pressed_key:
-            self.pads[pressed_key].click()
+            self.pads[pressed_key].trigger_pad()
