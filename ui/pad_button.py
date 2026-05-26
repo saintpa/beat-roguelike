@@ -1,7 +1,8 @@
 import os
 
 from PySide6.QtWidgets import QPushButton, QFileDialog
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QRectF
+from PySide6.QtGui import QPainter, QColor
 
 from audio.audio_engine import load_sound, play_sound
 
@@ -13,6 +14,12 @@ class PadButton(QPushButton):
         self.key_name = key_name
         self.sound = None
         self.sound_path = None
+
+        self.progress = 0
+        self.timer_step_ms = 30
+
+        self.play_timer = QTimer(self)
+        self.play_timer.timeout.connect(self.update_progress)
 
         self.setMinimumSize(140, 120)
 
@@ -61,21 +68,71 @@ class PadButton(QPushButton):
             self.update_text()
             print(f"Loaded sound for {self.key_name}: {file_path}")
 
+        self.play_timer.start(self.timer_step_ms)
+
     def trigger_pad(self):
         self.flash()
 
-        if self.sound:
-            play_sound(self.sound)
-        else:
+        if not self.sound:
             print(f"No sound loaded for pad {self.key_name}")
+            return
+
+        play_sound(self.sound)
+
+        self.setText("")
+
+        duration_ms = int(self.sound.get_length() * 1000)
+
+        self.progress = 0
+        self.progress_step = 1 / max(duration_ms / self.timer_step_ms, 1)
+
+        self.play_timer.start(self.timer_step_ms)
+
+    def update_progress(self):
+        self.progress += self.progress_step
+
+        if self.progress >= 1:
+            self.progress = 0
+            self.play_timer.stop()
+
+            self.update_text()
+
+            self.update()
+
+            return
+
+        self.update()
 
     def flash(self):
         self.setStyleSheet(self.active_style)
-
         QTimer.singleShot(150, self.reset_style)
 
     def reset_style(self):
         self.setStyleSheet(self.normal_style)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+
+        if self.progress <= 0 or self.progress >= 1:
+            return
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        size = min(self.width(), self.height()) - 28
+
+        rect = QRectF((self.width() - size) / 2, (self.height() - size) / 2, size, size)
+
+        painter.setPen(Qt.PenStyle.NoPen)
+
+        fill_color = QColor("#4de1ff")
+        fill_color.setAlpha(180)
+        painter.setBrush(fill_color)
+
+        start_angle = 90 * 16
+        span_angle = int(-360 * self.progress * 16)
+
+        painter.drawPie(rect, start_angle, span_angle)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.RightButton:
