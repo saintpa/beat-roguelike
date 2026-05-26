@@ -1,4 +1,5 @@
-from PySide6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel
+from PySide6.QtWidgets import QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QLabel
+
 from PySide6.QtCore import Qt
 
 from ui.pad_button import PadButton
@@ -9,68 +10,46 @@ class SamplerWindow(QWidget):
         super().__init__()
 
         self.setWindowTitle("Beat Roguelike")
-        self.setFixedSize(800, 850)
+        self.resize(1200, 700)
+
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self.pads = {}
 
-        main_layout = QVBoxLayout()
+        main_layout = QHBoxLayout()
 
-        melody_label = QLabel("MELODY")
-        drum_label = QLabel("DRUMS")
+        melody_section = self.create_pad_section(
+            title="MELODY",
+            keys=[
+                "Q",
+                "W",
+                "E",
+                "A",
+                "S",
+                "D",
+                "Z",
+                "X",
+                "C",
+            ],
+        )
 
-        label_style = """
-            QLabel {
-                color: #ffcc66;
-                font-size: 24px;
-                font-weight: bold;
-            }
-        """
+        drum_section = self.create_pad_section(
+            title="DRUMS",
+            keys=[
+                "I",
+                "O",
+                "P",
+                "K",
+                "L",
+                ";",
+                ",",
+                ".",
+                "/",
+            ],
+        )
 
-        melody_label.setStyleSheet(label_style)
-        drum_label.setStyleSheet(label_style)
-
-        melody_layout = QGridLayout()
-        drum_layout = QGridLayout()
-
-        melody_keys = [
-            "Q",
-            "W",
-            "E",
-            "A",
-            "S",
-            "D",
-            "Z",
-            "X",
-            "C",
-        ]
-
-        drum_keys = [
-            "I",
-            "O",
-            "P",
-            "K",
-            "L",
-            ";",
-            ",",
-            ".",
-            "/",
-        ]
-
-        for i, key in enumerate(melody_keys):
-            pad = PadButton(key)
-            self.pads[key] = pad
-            melody_layout.addWidget(pad, i // 3, i % 3)
-
-        for i, key in enumerate(drum_keys):
-            pad = PadButton(key)
-            self.pads[key] = pad
-            drum_layout.addWidget(pad, i // 3, i % 3)
-
-        main_layout.addWidget(melody_label)
-        main_layout.addLayout(melody_layout)
-
-        main_layout.addWidget(drum_label)
-        main_layout.addLayout(drum_layout)
+        main_layout.addLayout(melody_section)
+        main_layout.addLayout(drum_section)
 
         self.setLayout(main_layout)
 
@@ -82,31 +61,55 @@ class SamplerWindow(QWidget):
         """
         )
 
+    def create_pad_section(self, title, keys):
+        section_layout = QVBoxLayout()
+
+        label = QLabel(title)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        label.setStyleSheet(
+            """
+            QLabel {
+            color: #ffcc66;
+            font-size: 28px;
+            font-weight: bold;
+                }"""
+        )
+        grid = QGridLayout()
+
+        for i, key in enumerate(keys):
+            pad = PadButton(key)
+            self.pads[key] = pad
+            grid.addWidget(pad, i // 3, i % 3)
+
+        section_layout.addWidget(label)
+        section_layout.addLayout(grid)
+
+        return section_layout
+
     def keyPressEvent(self, event):
         key_map = {
-            # Melody
-            Qt.Key_Q: "Q",
-            Qt.Key_W: "W",
-            Qt.Key_E: "E",
-            Qt.Key_A: "A",
-            Qt.Key_S: "S",
-            Qt.Key_D: "D",
-            Qt.Key_Z: "Z",
-            Qt.Key_X: "X",
-            Qt.Key_C: "C",
-            # Drums
-            Qt.Key_I: "I",
-            Qt.Key_O: "O",
-            Qt.Key_P: "P",
-            Qt.Key_K: "K",
-            Qt.Key_L: "L",
-            Qt.Key_Semicolon: ";",
-            Qt.Key_Comma: ",",
-            Qt.Key_Period: ".",
-            Qt.Key_Slash: "/",
+            Qt.Key.Key_Q: "Q",
+            Qt.Key.Key_W: "W",
+            Qt.Key.Key_E: "E",
+            Qt.Key.Key_A: "A",
+            Qt.Key.Key_S: "S",
+            Qt.Key.Key_D: "D",
+            Qt.Key.Key_Z: "Z",
+            Qt.Key.Key_X: "X",
+            Qt.Key.Key_C: "C",
+            Qt.Key.Key_I: "I",
+            Qt.Key.Key_O: "O",
+            Qt.Key.Key_P: "P",
+            Qt.Key.Key_K: "K",
+            Qt.Key.Key_L: "L",
+            Qt.Key.Key_Semicolon: ";",
+            Qt.Key.Key_Comma: ",",
+            Qt.Key.Key_Period: ".",
+            Qt.Key.Key_Slash: "/",
         }
 
         pressed_key = key_map.get(event.key())
 
         if pressed_key:
-            self.pads[pressed_key].play_pad()
+            self.pads[pressed_key].click()

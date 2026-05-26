@@ -66,10 +66,13 @@ class PadButton(QPushButton):
             self.update_text()
 
     def play_pad(self):
-        play_sound(self.sound)
+        if self.sound:
+            play_sound(self.sound)
+        else:
+            print(f"No sound loaded for pad {self.key_name}")
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.RightButton:
+        if event.button() == Qt.MouseButton.RightButton:
             self.load_pad_sound()
 
         else:
