@@ -77,6 +77,10 @@ class PadButton(QPushButton):
         self.clicked.connect(self.trigger_pad)
 
     def update_text(self):
+        if self.repeat_enabled and self.repeat_bpm:
+            self.setText(f"{self.key_name}\n🔁 {self.repeat_bpm} BPM")
+            return
+
         if self.sound_path:
             filename = os.path.basename(self.sound_path)
             self.setText(f"{self.key_name}\n{self.short_filename(filename)}")
@@ -118,7 +122,10 @@ class PadButton(QPushButton):
 
         play_sound_on_channel(self.sound, self.channel)
 
-        self.setText("")
+        if self.repeat_enabled:
+            self.update_text()
+        else:
+            self.setText("")
 
         duration_ms = int(self.sound.get_length() * 1000)
 
@@ -174,6 +181,7 @@ class PadButton(QPushButton):
             self.repeat_interval_ms = interval_ms
             self.repeat_timer.start(interval_ms)
             self.setStyleSheet(self.repeat_style)
+            self.update_text()
             self.trigger_pad()
             print(f"{self.key_name} repeat ON at {bpm} BPM")
             return
@@ -183,10 +191,12 @@ class PadButton(QPushButton):
             self.repeat_interval_ms = interval_ms
             self.repeat_timer.start(interval_ms)
             self.setStyleSheet(self.repeat_style)
+            self.update_text()
             print(f"{self.key_name} repeat updated to {bpm} BPM")
             return
 
         self.stop_repeat()
+        self.stop_audio_only()
         print(f"{self.key_name} repeat OFF")
 
     def stop_repeat(self):
@@ -195,6 +205,7 @@ class PadButton(QPushButton):
         self.repeat_interval_ms = None
         self.repeat_timer.stop()
         self.setStyleSheet(self.normal_style)
+        self.update_text()
 
     def flash(self):
         if self.repeat_enabled:
