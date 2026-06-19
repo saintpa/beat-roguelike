@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 
 from ui.pad_button import PadButton
-
 from systems.kit_manager import load_kit_file
+from systems.bpm_manager import BPMManager
 
 
 class SamplerWindow(QWidget):
@@ -21,10 +21,13 @@ class SamplerWindow(QWidget):
 
         self.setWindowTitle("Beat Roguelike")
         self.resize(1200, 700)
-
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self.pads = {}
+
+        self.bpm_manager = BPMManager()
+        self.is_typing_bpm = False
+        self.bpm_input = ""
 
         root_layout = QVBoxLayout()
         top_bar = QHBoxLayout()
@@ -33,10 +36,23 @@ class SamplerWindow(QWidget):
         load_kit_button = QPushButton("Load Kit JSON")
         load_kit_button.clicked.connect(self.open_kit_file)
 
+        self.bpm_label = QLabel(f"BPM: {self.bpm_manager.get_bpm()}")
+        self.bpm_label.setStyleSheet(
+            """
+            QLabel {
+                color: #4de1ff;
+                font-size: 22px;
+                font-weight: bold;
+            }
+        """
+        )
+
         top_bar.addWidget(load_kit_button)
+        top_bar.addWidget(self.bpm_label)
         top_bar.addStretch()
 
         root_layout.addLayout(top_bar)
+
         melody_section = self.create_pad_section(
             title="MELODY",
             keys=[
@@ -86,15 +102,16 @@ class SamplerWindow(QWidget):
 
         label = QLabel(title)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         label.setStyleSheet(
             """
             QLabel {
-            color: #ffcc66;
-            font-size: 28px;
-            font-weight: bold;
-                }"""
+                color: #ffcc66;
+                font-size: 28px;
+                font-weight: bold;
+            }
+        """
         )
+
         grid = QGridLayout()
 
         for i, key in enumerate(keys):
@@ -108,6 +125,24 @@ class SamplerWindow(QWidget):
         return section_layout
 
     def keyPressEvent(self, event):
+        if self.is_typing_bpm:
+            self.handle_bpm_typing(event)
+            return
+
+        if event.key() == Qt.Key.Key_BracketRight:
+            self.start_bpm_input()
+            return
+
+        if event.key() == Qt.Key.Key_Minus:
+            self.bpm_manager.decrease()
+            self.update_bpm_label()
+            return
+
+        if event.key() == Qt.Key.Key_Equal:
+            self.bpm_manager.increase()
+            self.update_bpm_label()
+            return
+
         key_map = {
             Qt.Key.Key_Q: "Q",
             Qt.Key.Key_W: "W",
@@ -137,6 +172,26 @@ class SamplerWindow(QWidget):
             else:
                 self.pads[pressed_key].trigger_pad()
 
+    def handle_bpm_typing(self, event):
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self.confirm_bpm_input()
+            return
+
+        if event.key() == Qt.Key.Key_Escape:
+            self.cancel_bpm_input()
+            return
+
+        if event.key() == Qt.Key.Key_Backspace:
+            self.bpm_input = self.bpm_input[:-1]
+            self.update_bpm_label()
+            return
+
+        text = event.text()
+
+        if text.isdigit():
+            self.bpm_input += text
+            self.update_bpm_label()
+
     def open_kit_file(self):
         kit_path, _ = QFileDialog.getOpenFileName(
             self,
@@ -154,3 +209,27 @@ class SamplerWindow(QWidget):
         for key, sound_path in kit_data.items():
             if key in self.pads:
                 self.pads[key].load_sound_from_path(sound_path)
+
+    def update_bpm_label(self):
+        if self.is_typing_bpm:
+            self.bpm_label.setText(f"BPM: {self.bpm_input}_")
+        else:
+            self.bpm_label.setText(f"BPM: {self.bpm_manager.get_bpm()}")
+
+    def start_bpm_input(self):
+        self.is_typing_bpm = True
+        self.bpm_input = ""
+        self.update_bpm_label()
+
+    def confirm_bpm_input(self):
+        if self.bpm_input:
+            self.bpm_manager.set_bpm(int(self.bpm_input))
+
+        self.is_typing_bpm = False
+        self.bpm_input = ""
+        self.update_bpm_label()
+
+    def cancel_bpm_input(self):
+        self.is_typing_bpm = False
+        self.bpm_input = ""
+        self.update_bpm_label()
