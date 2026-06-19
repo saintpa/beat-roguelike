@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
 )
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 
 from ui.pad_button import PadButton
 from systems.kit_manager import load_kit_file
@@ -29,6 +29,11 @@ class SamplerWindow(QWidget):
         self.is_typing_bpm = False
         self.bpm_input = ""
 
+        self.metronome_on = False
+
+        self.metronome_timer = QTimer(self)
+        self.metronome_timer.timeout.connect(self.metronome_tick)
+
         root_layout = QVBoxLayout()
         top_bar = QHBoxLayout()
         main_layout = QHBoxLayout()
@@ -47,8 +52,16 @@ class SamplerWindow(QWidget):
         """
         )
 
+        self.metronome_button = QPushButton("Metronome OFF")
+        self.metronome_button.clicked.connect(self.toggle_metronome)
+
         top_bar.addWidget(load_kit_button)
         top_bar.addWidget(self.bpm_label)
+        top_bar.addStretch()
+
+        top_bar.addWidget(load_kit_button)
+        top_bar.addWidget(self.bpm_label)
+        top_bar.addWidget(self.metronome_button)
         top_bar.addStretch()
 
         root_layout.addLayout(top_bar)
@@ -215,6 +228,8 @@ class SamplerWindow(QWidget):
             self.bpm_label.setText(f"BPM: {self.bpm_input}_")
         else:
             self.bpm_label.setText(f"BPM: {self.bpm_manager.get_bpm()}")
+        if self.metronome_on:
+            self.metronome_timer.start(self.bpm_to_interval_ms())
 
     def start_bpm_input(self):
         self.is_typing_bpm = True
@@ -233,3 +248,20 @@ class SamplerWindow(QWidget):
         self.is_typing_bpm = False
         self.bpm_input = ""
         self.update_bpm_label()
+
+    def bpm_to_interval_ms(self):
+        bpm = self.bpm_manager.get_bpm()
+        return int(60000 / bpm)
+
+    def toggle_metronome(self):
+        self.metronome_on = not self.metronome_on
+
+        if self.metronome_on:
+            self.metronome_button.setText("Metronome ON")
+            self.metronome_timer.start(self.bpm_to_interval_ms())
+        else:
+            self.metronome_button.setText("Metronome OFF")
+            self.metronome_timer.stop()
+
+    def metronome_tick(self):
+        print("tick")
