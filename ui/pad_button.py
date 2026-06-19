@@ -14,6 +14,7 @@ class PadButton(QPushButton):
         self.key_name = key_name
         self.sound = None
         self.sound_path = None
+        self.channel = None
 
         self.progress = 0
         self.timer_step_ms = 30
@@ -76,8 +77,7 @@ class PadButton(QPushButton):
         if not self.sound:
             print(f"No sound loaded for pad {self.key_name}")
             return
-
-        play_sound(self.sound)
+        self.channel = play_sound(self.sound, self.channel)
 
         self.setText("")
 
