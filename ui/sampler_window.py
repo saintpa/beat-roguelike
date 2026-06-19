@@ -30,7 +30,6 @@ class SamplerWindow(QWidget):
         self.bpm_input = ""
 
         self.metronome_on = False
-
         self.metronome_timer = QTimer(self)
         self.metronome_timer.timeout.connect(self.metronome_tick)
 
@@ -54,10 +53,6 @@ class SamplerWindow(QWidget):
 
         self.metronome_button = QPushButton("Metronome OFF")
         self.metronome_button.clicked.connect(self.toggle_metronome)
-
-        top_bar.addWidget(load_kit_button)
-        top_bar.addWidget(self.bpm_label)
-        top_bar.addStretch()
 
         top_bar.addWidget(load_kit_button)
         top_bar.addWidget(self.bpm_label)
@@ -180,8 +175,12 @@ class SamplerWindow(QWidget):
         pressed_key = key_map.get(event.key())
 
         if pressed_key:
-            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+            if event.modifiers() & Qt.KeyboardModifier.AltModifier:
+                self.pads[pressed_key].toggle_repeat(self.bpm_manager.get_bpm())
+
+            elif event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                 self.pads[pressed_key].stop_pad()
+
             else:
                 self.pads[pressed_key].trigger_pad()
 
@@ -228,6 +227,7 @@ class SamplerWindow(QWidget):
             self.bpm_label.setText(f"BPM: {self.bpm_input}_")
         else:
             self.bpm_label.setText(f"BPM: {self.bpm_manager.get_bpm()}")
+
         if self.metronome_on:
             self.metronome_timer.start(self.bpm_to_interval_ms())
 
