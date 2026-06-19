@@ -78,7 +78,7 @@ class SamplerWindow(QWidget):
         grid = QGridLayout()
 
         for i, key in enumerate(keys):
-            pad = PadButton(key)
+            pad = PadButton(key, len(self.pads))
             self.pads[key] = pad
             grid.addWidget(pad, i // 3, i % 3)
 
@@ -112,4 +112,7 @@ class SamplerWindow(QWidget):
         pressed_key = key_map.get(event.key())
 
         if pressed_key:
-            self.pads[pressed_key].trigger_pad()
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                self.pads[pressed_key].stop_pad()
+            else:
+                self.pads[pressed_key].trigger_pad()

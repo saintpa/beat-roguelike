@@ -4,19 +4,27 @@ from PySide6.QtWidgets import QPushButton, QFileDialog
 from PySide6.QtCore import Qt, QTimer, QRectF
 from PySide6.QtGui import QPainter, QColor
 
-from audio.audio_engine import load_sound, play_sound
+from audio.audio_engine import (
+    load_sound,
+    get_channel,
+    play_sound_on_channel,
+    stop_channel,
+)
 
 
 class PadButton(QPushButton):
-    def __init__(self, key_name):
+    def __init__(self, key_name, channel_id):
         super().__init__()
 
         self.key_name = key_name
         self.sound = None
         self.sound_path = None
-        self.channel = None
+
+        # Each pad owns one permanent audio channel.
+        self.channel = get_channel(channel_id)
 
         self.progress = 0
+        self.progress_step = 0
         self.timer_step_ms = 30
 
         self.play_timer = QTimer(self)
@@ -54,13 +62,22 @@ class PadButton(QPushButton):
     def update_text(self):
         if self.sound_path:
             filename = os.path.basename(self.sound_path)
-            self.setText(f"{self.key_name}\n{filename}")
+            self.setText(f"{self.key_name}\n{self.short_filename(filename)}")
         else:
             self.setText(f"{self.key_name}\nEMPTY")
 
+    def short_filename(self, filename, max_length=14):
+        if len(filename) <= max_length:
+            return filename
+
+        return filename[: max_length - 3] + "..."
+
     def load_pad_sound(self):
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Choose Sound", "", "Audio Files (*.wav *.mp3 *.ogg)"
+            self,
+            "Choose Sound",
+            "",
+            "Audio Files (*.wav *.mp3 *.ogg)",
         )
 
         if file_path:
@@ -69,15 +86,15 @@ class PadButton(QPushButton):
             self.update_text()
             print(f"Loaded sound for {self.key_name}: {file_path}")
 
-        self.play_timer.start(self.timer_step_ms)
-
     def trigger_pad(self):
+        self.stop_pad()
         self.flash()
 
         if not self.sound:
             print(f"No sound loaded for pad {self.key_name}")
             return
-        self.channel = play_sound(self.sound, self.channel)
+
+        play_sound_on_channel(self.sound, self.channel)
 
         self.setText("")
 
@@ -88,17 +105,26 @@ class PadButton(QPushButton):
 
         self.play_timer.start(self.timer_step_ms)
 
+    def stop_pad(self):
+        stop_channel(self.channel)
+
+        self.progress = 0
+        self.progress_step = 0
+        self.play_timer.stop()
+
+        self.update_text()
+        self.setStyleSheet(self.normal_style)
+        self.update()
+
     def update_progress(self):
         self.progress += self.progress_step
 
         if self.progress >= 1:
             self.progress = 0
+            self.progress_step = 0
             self.play_timer.stop()
-
             self.update_text()
-
             self.update()
-
             return
 
         self.update()
@@ -121,7 +147,12 @@ class PadButton(QPushButton):
 
         size = min(self.width(), self.height()) - 28
 
-        rect = QRectF((self.width() - size) / 2, (self.height() - size) / 2, size, size)
+        rect = QRectF(
+            (self.width() - size) / 2,
+            (self.height() - size) / 2,
+            size,
+            size,
+        )
 
         painter.setPen(Qt.PenStyle.NoPen)
 
