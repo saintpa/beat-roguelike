@@ -170,3 +170,8 @@ class PadButton(QPushButton):
             self.load_pad_sound()
         else:
             super().mousePressEvent(event)
+
+    def load_sound_from_path(self, file_path):
+        self.sound_path = file_path
+        self.sound = load_sound(file_path)
+        self.update_text()

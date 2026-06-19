@@ -1,8 +1,18 @@
-from PySide6.QtWidgets import QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QLabel
+from PySide6.QtWidgets import (
+    QWidget,
+    QGridLayout,
+    QHBoxLayout,
+    QVBoxLayout,
+    QLabel,
+    QPushButton,
+    QFileDialog,
+)
 
 from PySide6.QtCore import Qt
 
 from ui.pad_button import PadButton
+
+from systems.kit_manager import load_kit_file
 
 
 class SamplerWindow(QWidget):
@@ -16,8 +26,17 @@ class SamplerWindow(QWidget):
 
         self.pads = {}
 
+        root_layout = QVBoxLayout()
+        top_bar = QHBoxLayout()
         main_layout = QHBoxLayout()
 
+        load_kit_button = QPushButton("Load Kit JSON")
+        load_kit_button.clicked.connect(self.open_kit_file)
+
+        top_bar.addWidget(load_kit_button)
+        top_bar.addStretch()
+
+        root_layout.addLayout(top_bar)
         melody_section = self.create_pad_section(
             title="MELODY",
             keys=[
@@ -51,7 +70,8 @@ class SamplerWindow(QWidget):
         main_layout.addLayout(melody_section)
         main_layout.addLayout(drum_section)
 
-        self.setLayout(main_layout)
+        root_layout.addLayout(main_layout)
+        self.setLayout(root_layout)
 
         self.setStyleSheet(
             """
@@ -116,3 +136,21 @@ class SamplerWindow(QWidget):
                 self.pads[pressed_key].stop_pad()
             else:
                 self.pads[pressed_key].trigger_pad()
+
+    def open_kit_file(self):
+        kit_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Choose Kit JSON",
+            "",
+            "JSON Files (*.json)",
+        )
+
+        if kit_path:
+            self.load_kit(kit_path)
+
+    def load_kit(self, kit_path):
+        kit_data = load_kit_file(kit_path)
+
+        for key, sound_path in kit_data.items():
+            if key in self.pads:
+                self.pads[key].load_sound_from_path(sound_path)
