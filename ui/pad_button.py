@@ -77,6 +77,10 @@ class PadButton(QPushButton):
         self.clicked.connect(self.trigger_pad)
 
     def update_text(self):
+        if self.repeat_enabled and self.repeat_bpm == 0:
+            self.setText(f"{self.key_name}\n🔁 LOOP")
+            return
+
         if self.repeat_enabled and self.repeat_bpm:
             self.setText(f"{self.key_name}\n🔁 {self.repeat_bpm} BPM")
             return
@@ -155,13 +159,16 @@ class PadButton(QPushButton):
 
     def update_progress(self):
         self.progress += self.progress_step
-
         if self.progress >= 1:
             self.progress = 0
             self.progress_step = 0
             self.play_timer.stop()
             self.update_text()
             self.update()
+
+            if self.repeat_enabled and self.repeat_bpm == 0:
+                self.trigger_pad()
+                return
 
             if self.repeat_enabled:
                 self.setStyleSheet(self.repeat_style)
@@ -173,6 +180,10 @@ class PadButton(QPushButton):
         self.update()
 
     def toggle_repeat(self, bpm):
+        if bpm == 0:
+            self.toggle_natural_loop()
+            return
+
         interval_ms = int(60000 / bpm)
 
         if not self.repeat_enabled:
@@ -198,6 +209,31 @@ class PadButton(QPushButton):
         self.stop_repeat()
         self.stop_audio_only()
         print(f"{self.key_name} repeat OFF")
+
+    def toggle_natural_loop(self):
+        if not self.repeat_enabled:
+            self.repeat_enabled = True
+            self.repeat_bpm = 0
+            self.repeat_interval_ms = None
+            self.repeat_timer.stop()
+            self.setStyleSheet(self.repeat_style)
+            self.update_text()
+            self.trigger_pad()
+            print(f"{self.key_name} natural loop ON")
+            return
+
+        if self.repeat_bpm != 0:
+            self.repeat_bpm = 0
+            self.repeat_interval_ms = None
+            self.repeat_timer.stop()
+            self.setStyleSheet(self.repeat_style)
+            self.update_text()
+            print(f"{self.key_name} switched to natural loop")
+            return
+
+        self.stop_repeat()
+        self.stop_audio_only()
+        print(f"{self.key_name} natural loop OFF")
 
     def stop_repeat(self):
         self.repeat_enabled = False

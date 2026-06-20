@@ -3,12 +3,6 @@ class BPMManager:
         self.bpm = initial_bpm
 
     def set_bpm(self, bpm):
-        if bpm < 40:
-            bpm = 40
-
-        if bpm > 240:
-            bpm = 240
-
         self.bpm = bpm
 
     def increase(self):

@@ -175,9 +175,14 @@ class SamplerWindow(QWidget):
         pressed_key = key_map.get(event.key())
 
         if pressed_key:
-            if event.modifiers() & Qt.KeyboardModifier.AltModifier:
+            if (
+                event.modifiers() & Qt.KeyboardModifier.AltModifier
+                and event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+            ):
                 self.pads[pressed_key].toggle_repeat(self.bpm_manager.get_bpm())
 
+            elif event.modifiers() & Qt.KeyboardModifier.AltModifier:
+                self.pads[pressed_key].toggle_repeat(0)
             elif event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                 self.pads[pressed_key].stop_pad()
 

@@ -12,5 +12,4 @@ venv/
 # Downloaded sample packs
 sounds/downloaded_sounds/
 
-# Optional: if sample library gets huge later
-# sounds/my_sounds/
+kits/ohlalala.json
