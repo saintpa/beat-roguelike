@@ -70,3 +70,16 @@ class LoopManager:
         slot.events.append((elapsed, pad_key))
 
         print(f"Recorded {pad_key} at {elapsed:.2f}s")
+
+    def record_initial_active_pads(self, active_pad_keys: list[str]):
+        if self.active_recording_slot is None:
+            return
+
+        slot = self.slots[self.active_recording_slot]
+
+        if not slot.is_recording:
+            return
+
+        for pad_key in active_pad_keys:
+            slot.events.append((0.0, pad_key))
+            print(f"Recorded active pad {pad_key} at 0.00s")

@@ -145,12 +145,16 @@ class SamplerWindow(QWidget):
             slot_number = self.number_key_to_slot(event.key())
 
             if slot_number is not None:
+                was_recording = self.loop_manager.slots[slot_number].is_recording
+
                 self.loop_manager.toggle_recording(slot_number)
+
+                if not was_recording:
+                    active_pad_keys = self.get_active_repeat_pad_keys()
+                    self.loop_manager.record_initial_active_pads(active_pad_keys)
+
                 self.waiting_for_loop_slot = False
                 return
-
-            self.waiting_for_loop_slot = False
-            return
 
         if event.key() == Qt.Key.Key_QuoteLeft:
             self.waiting_for_loop_slot = True
@@ -307,3 +311,12 @@ class SamplerWindow(QWidget):
         }
 
         return number_map.get(key)
+
+    def get_active_repeat_pad_keys(self):
+        active_keys = []
+
+        for key, pad in self.pads.items():
+            if pad.repeat_enabled:
+                active_keys.append(key)
+
+        return active_keys
