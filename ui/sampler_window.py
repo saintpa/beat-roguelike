@@ -13,6 +13,7 @@ from PySide6.QtCore import Qt, QTimer
 from ui.pad_button import PadButton
 from systems.kit_manager import load_kit_file
 from systems.bpm_manager import BPMManager
+from systems.loop_manager import LoopManager
 
 
 class SamplerWindow(QWidget):
@@ -50,6 +51,9 @@ class SamplerWindow(QWidget):
             }
         """
         )
+
+        self.loop_manager = LoopManager()
+        self.waiting_for_loop_slot = False
 
         self.metronome_button = QPushButton("Metronome OFF")
         self.metronome_button.clicked.connect(self.toggle_metronome)
@@ -137,6 +141,22 @@ class SamplerWindow(QWidget):
             self.handle_bpm_typing(event)
             return
 
+        if self.waiting_for_loop_slot:
+            slot_number = self.number_key_to_slot(event.key())
+
+            if slot_number is not None:
+                self.loop_manager.toggle_recording(slot_number)
+                self.waiting_for_loop_slot = False
+                return
+
+            self.waiting_for_loop_slot = False
+            return
+
+        if event.key() == Qt.Key.Key_QuoteLeft:
+            self.waiting_for_loop_slot = True
+            print("Choose loop slot 0-9")
+            return
+
         if event.key() == Qt.Key.Key_BracketRight:
             self.start_bpm_input()
             return
@@ -188,6 +208,7 @@ class SamplerWindow(QWidget):
 
             else:
                 self.pads[pressed_key].trigger_pad()
+                self.loop_manager.record_pad_press(pressed_key)
 
     def handle_bpm_typing(self, event):
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
@@ -270,3 +291,19 @@ class SamplerWindow(QWidget):
 
     def metronome_tick(self):
         print("tick")
+
+    def number_key_to_slot(self, key):
+        number_map = {
+            Qt.Key.Key_1: 1,
+            Qt.Key.Key_2: 2,
+            Qt.Key.Key_3: 3,
+            Qt.Key.Key_4: 4,
+            Qt.Key.Key_5: 5,
+            Qt.Key.Key_6: 6,
+            Qt.Key.Key_7: 7,
+            Qt.Key.Key_8: 8,
+            Qt.Key.Key_9: 9,
+            Qt.Key.Key_0: 0,
+        }
+
+        return number_map.get(key)
