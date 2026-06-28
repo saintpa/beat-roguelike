@@ -4,7 +4,7 @@ from typing import Optional
 
 class LoopSlot:
     def __init__(self):
-        self.events: list[tuple[float, str]] = []
+        self.events: list[tuple[float, str, str]] = []
         self.is_recording: bool = False
         self.is_playing: bool = False
         self.record_start_time: Optional[float] = None
@@ -67,9 +67,23 @@ class LoopManager:
             return
 
         elapsed = time.time() - slot.record_start_time
-        slot.events.append((elapsed, pad_key))
+        slot.events.append((elapsed, "PLAY", pad_key))
 
-        print(f"Recorded {pad_key} at {elapsed:.2f}s")
+        print(f"Recorded PLAY {pad_key} at {elapsed:.2f}s")
+
+    def record_pad_stop(self, pad_key: str):
+        if self.active_recording_slot is None:
+            return
+
+        slot = self.slots[self.active_recording_slot]
+
+        if not slot.is_recording or slot.record_start_time is None:
+            return
+
+        elapsed = time.time() - slot.record_start_time
+        slot.events.append((elapsed, "STOP", pad_key))
+
+        print(f"Recorded STOP {pad_key} at {elapsed:.2f}s")
 
     def record_initial_active_pads(self, active_pad_keys: list[str]):
         if self.active_recording_slot is None:
@@ -81,5 +95,6 @@ class LoopManager:
             return
 
         for pad_key in active_pad_keys:
-            slot.events.append((0.0, pad_key))
-            print(f"Recorded active pad {pad_key} at 0.00s")
+            slot.events.append((0.0, "PLAY", pad_key))
+            print(f"Recorded active PLAY {pad_key} at 0.00s")
+

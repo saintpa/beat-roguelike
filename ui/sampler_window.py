@@ -207,8 +207,10 @@ class SamplerWindow(QWidget):
 
             elif event.modifiers() & Qt.KeyboardModifier.AltModifier:
                 self.pads[pressed_key].toggle_repeat(0)
+
             elif event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                 self.pads[pressed_key].stop_pad()
+                self.loop_manager.record_pad_stop(pressed_key)
 
             else:
                 self.pads[pressed_key].trigger_pad()
