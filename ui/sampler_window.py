@@ -54,7 +54,11 @@ class SamplerWindow(QWidget):
 
         self.loop_manager = LoopManager()
         self.waiting_for_loop_slot = False
+        self.loop_play_timer = QTimer(self)
+        self.loop_play_timer.timeout.connect(self.update_loop_playback)
+        self.loop_play_timer.start(20)
 
+        self.loop_playheads = {}
         self.metronome_button = QPushButton("Metronome OFF")
         self.metronome_button.clicked.connect(self.toggle_metronome)
 
@@ -136,6 +140,42 @@ class SamplerWindow(QWidget):
 
         return section_layout
 
+    def update_loop_playback(self):
+        import time
+
+        now = time.time()
+
+        for slot_number, slot in self.loop_manager.slots.items():
+            if not slot.is_playing or not slot.events or slot.length <= 0:
+                continue
+
+            if slot_number not in self.loop_playheads:
+                self.loop_playheads[slot_number] = {
+                    "start_time": now,
+                    "next_event_index": 0,
+                }
+
+            playhead = self.loop_playheads[slot_number]
+            elapsed = now - playhead["start_time"]
+
+            if elapsed >= slot.length:
+                playhead["start_time"] = now
+                playhead["next_event_index"] = 0
+                elapsed = 0
+
+            while playhead["next_event_index"] < len(slot.events):
+                event_time, action, pad_key = slot.events[playhead["next_event_index"]]
+
+                if event_time > elapsed:
+                    break
+
+                if action == "PLAY":
+                    self.pads[pad_key].trigger_pad()
+                elif action == "STOP":
+                    self.pads[pad_key].stop_pad()
+
+                playhead["next_event_index"] += 1
+
     def keyPressEvent(self, event):
         if self.is_typing_bpm:
             self.handle_bpm_typing(event)
@@ -160,7 +200,24 @@ class SamplerWindow(QWidget):
             self.waiting_for_loop_slot = True
             print("Choose loop slot 0-9")
             return
+        slot_number = self.number_key_to_slot(event.key())
 
+        if slot_number is not None:
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                self.kill_loop_slot(slot_number)
+                return
+
+            self.loop_manager.toggle_playback(slot_number)
+
+            if self.loop_manager.slots[slot_number].is_playing:
+                self.loop_playheads[slot_number] = {
+                    "start_time": __import__("time").time(),
+                    "next_event_index": 0,
+                }
+            else:
+                self.loop_playheads.pop(slot_number, None)
+
+            return
         if event.key() == Qt.Key.Key_BracketRight:
             self.start_bpm_input()
             return
@@ -310,6 +367,17 @@ class SamplerWindow(QWidget):
             Qt.Key.Key_8: 8,
             Qt.Key.Key_9: 9,
             Qt.Key.Key_0: 0,
+            # Shift + number symbols on keyboard
+            Qt.Key.Key_Exclam: 1,  # !
+            Qt.Key.Key_At: 2,  # @
+            Qt.Key.Key_NumberSign: 3,  # #
+            Qt.Key.Key_Dollar: 4,  # $
+            Qt.Key.Key_Percent: 5,  # %
+            Qt.Key.Key_AsciiCircum: 6,  # ^
+            Qt.Key.Key_Ampersand: 7,  # &
+            Qt.Key.Key_Asterisk: 8,  # *
+            Qt.Key.Key_ParenLeft: 9,  # (
+            Qt.Key.Key_ParenRight: 0,  # )
         }
 
         return number_map.get(key)
@@ -322,3 +390,21 @@ class SamplerWindow(QWidget):
                 active_keys.append(key)
 
         return active_keys
+
+    def kill_loop_slot(self, slot_number):
+        slot = self.loop_manager.slots[slot_number]
+
+        pads_to_stop = set()
+
+        for event in slot.events:
+            _event_time, action, pad_key = event
+
+            if action in ("PLAY", "NATURAL_LOOP", "BPM_REPEAT"):
+                pads_to_stop.add(pad_key)
+
+        self.loop_manager.stop_playback(slot_number)
+        self.loop_playheads.pop(slot_number, None)
+
+        for pad_key in pads_to_stop:
+            if pad_key in self.pads:
+                self.pads[pad_key].stop_pad()

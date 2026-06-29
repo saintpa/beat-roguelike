@@ -98,3 +98,25 @@ class LoopManager:
             slot.events.append((0.0, "PLAY", pad_key))
             print(f"Recorded active PLAY {pad_key} at 0.00s")
 
+    def toggle_playback(self, slot_number: int):
+        slot = self.slots[slot_number]
+
+        if not slot.events:
+            print(f"Loop slot {slot_number} is empty")
+            return
+
+        slot.is_playing = not slot.is_playing
+
+        if slot.is_playing:
+            print(f"Playing loop slot {slot_number}")
+        else:
+            print(f"Stopped loop slot {slot_number}")
+
+    def stop_playback(self, slot_number: int):
+        slot = self.slots[slot_number]
+
+        if not slot.is_playing:
+            return
+
+        slot.is_playing = False
+        print(f"Killed loop slot {slot_number}")
