@@ -164,13 +164,21 @@ class SamplerWindow(QWidget):
                 elapsed = 0
 
             while playhead["next_event_index"] < len(slot.events):
-                event_time, action, pad_key = slot.events[playhead["next_event_index"]]
+                event_time, action, pad_key, mode, bpm= slot.events[playhead["next_event_index"]]
 
                 if event_time > elapsed:
                     break
 
                 if action == "PLAY":
-                    self.pads[pad_key].trigger_pad()
+                    if mode == "natural":
+                        self.pads[pad_key].toggle_repeat(0)
+
+                    elif mode == "bpm" and bpm is not None:
+                        self.pads[pad_key].toggle_repeat(bpm)
+
+                    else:
+                        self.pads[pad_key].trigger_pad()
+
                 elif action == "STOP":
                     self.pads[pad_key].stop_pad()
 
@@ -260,10 +268,13 @@ class SamplerWindow(QWidget):
                 event.modifiers() & Qt.KeyboardModifier.AltModifier
                 and event.modifiers() & Qt.KeyboardModifier.ShiftModifier
             ):
-                self.pads[pressed_key].toggle_repeat(self.bpm_manager.get_bpm())
+                bpm = self.bpm_manager.get_bpm()
+                self.pads[pressed_key].toggle_repeat(bpm)
+                self.loop_manager.record_pad_press(pressed_key, "bpm", bpm)
 
             elif event.modifiers() & Qt.KeyboardModifier.AltModifier:
                 self.pads[pressed_key].toggle_repeat(0)
+                self.loop_manager.record_pad_press(pressed_key, "natural", None)
 
             elif event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
                 self.pads[pressed_key].stop_pad()
@@ -271,7 +282,7 @@ class SamplerWindow(QWidget):
 
             else:
                 self.pads[pressed_key].trigger_pad()
-                self.loop_manager.record_pad_press(pressed_key)
+                self.loop_manager.record_pad_press(pressed_key, None, None)
 
     def handle_bpm_typing(self, event):
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
@@ -383,23 +394,21 @@ class SamplerWindow(QWidget):
         return number_map.get(key)
 
     def get_active_repeat_pad_keys(self):
-        active_keys = []
+        active_pads = []
 
         for key, pad in self.pads.items():
             if pad.repeat_enabled:
-                active_keys.append(key)
+                active_pads.append((key, pad.loop_mode, pad.repeat_bpm))
 
-        return active_keys
+        return active_pads
 
     def kill_loop_slot(self, slot_number):
         slot = self.loop_manager.slots[slot_number]
 
         pads_to_stop = set()
 
-        for event in slot.events:
-            _event_time, action, pad_key = event
-
-            if action in ("PLAY", "NATURAL_LOOP", "BPM_REPEAT"):
+        for event_time, action, pad_key, mode, bpm in slot.events:
+            if action == "PLAY":
                 pads_to_stop.add(pad_key)
 
         self.loop_manager.stop_playback(slot_number)

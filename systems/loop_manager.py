@@ -4,9 +4,11 @@ from typing import Optional
 
 class LoopSlot:
     def __init__(self):
-        self.events: list[tuple[float, str, str]] = []
+        self.events: list[tuple[float, str, str, str | None, int | None]] = []
+
         self.is_recording: bool = False
         self.is_playing: bool = False
+
         self.record_start_time: Optional[float] = None
         self.length: float = 0.0
 
@@ -14,7 +16,12 @@ class LoopSlot:
 class LoopManager:
     def __init__(self):
         self.slots: dict[int, LoopSlot] = {i: LoopSlot() for i in range(10)}
+
         self.active_recording_slot: Optional[int] = None
+
+    # -------------------------------------------------
+    # RECORDING
+    # -------------------------------------------------
 
     def toggle_recording(self, slot_number: int):
         slot = self.slots[slot_number]
@@ -47,6 +54,7 @@ class LoopManager:
             return
 
         slot.length = time.time() - slot.record_start_time
+
         slot.is_recording = False
         slot.record_start_time = None
 
@@ -57,7 +65,16 @@ class LoopManager:
         print(f"Events: {slot.events}")
         print(f"Length: {slot.length:.2f}s")
 
-    def record_pad_press(self, pad_key: str):
+    # -------------------------------------------------
+    # EVENT RECORDING
+    # -------------------------------------------------
+
+    def record_pad_press(
+        self,
+        pad_key: str,
+        mode: str | None = None,
+        bpm: int | None = None,
+    ):
         if self.active_recording_slot is None:
             return
 
@@ -67,9 +84,18 @@ class LoopManager:
             return
 
         elapsed = time.time() - slot.record_start_time
-        slot.events.append((elapsed, "PLAY", pad_key))
 
-        print(f"Recorded PLAY {pad_key} at {elapsed:.2f}s")
+        slot.events.append(
+            (
+                elapsed,
+                "PLAY",
+                pad_key,
+                mode,
+                bpm,
+            )
+        )
+
+        print(f"Recorded PLAY {pad_key} mode={mode} bpm={bpm} at {elapsed:.2f}s")
 
     def record_pad_stop(self, pad_key: str):
         if self.active_recording_slot is None:
@@ -81,11 +107,23 @@ class LoopManager:
             return
 
         elapsed = time.time() - slot.record_start_time
-        slot.events.append((elapsed, "STOP", pad_key))
+
+        slot.events.append(
+            (
+                elapsed,
+                "STOP",
+                pad_key,
+                None,
+                None,
+            )
+        )
 
         print(f"Recorded STOP {pad_key} at {elapsed:.2f}s")
 
-    def record_initial_active_pads(self, active_pad_keys: list[str]):
+    def record_initial_active_pads(
+        self,
+        active_pads,
+    ):
         if self.active_recording_slot is None:
             return
 
@@ -94,9 +132,22 @@ class LoopManager:
         if not slot.is_recording:
             return
 
-        for pad_key in active_pad_keys:
-            slot.events.append((0.0, "PLAY", pad_key))
-            print(f"Recorded active PLAY {pad_key} at 0.00s")
+        for pad_key, mode, bpm in active_pads:
+            slot.events.append(
+                (
+                    0.0,
+                    "PLAY",
+                    pad_key,
+                    mode,
+                    bpm,
+                )
+            )
+
+            print(f"Recorded active PLAY {pad_key} mode={mode} bpm={bpm}")
+
+    # -------------------------------------------------
+    # PLAYBACK
+    # -------------------------------------------------
 
     def toggle_playback(self, slot_number: int):
         slot = self.slots[slot_number]
@@ -119,4 +170,5 @@ class LoopManager:
             return
 
         slot.is_playing = False
+
         print(f"Killed loop slot {slot_number}")
